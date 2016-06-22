@@ -4,73 +4,54 @@
  */
 
 #include <string.h>
+#include <stdlib.h>
 #include <avr/io.h>
 #include <util/delay.h>
 #include "lcd.h"
 
+#define  LCD_BUFFER_SIZE    LCD_LINES * LCD_DISP_LENGTH
 
-uint8_t lcd_buffer[LCD_LINES][LCD_DISP_LENGTH];
+char *lcd_buffer;
 
 
-void lcd_buffer_init(void)
+inline void lcd_buffer_clr(void)
 {
-  memset(lcd_buffer, 254, sizeof(lcd_buffer));
+  memset(lcd_buffer, 254, LCD_BUFFER_SIZE);
 }
 
-void lcd_buffer_clr(void)
+inline void lcd_buffer_init(void)
 {
-  lcd_buffer_init();
+  lcd_buffer = malloc(LCD_BUFFER_SIZE);
+  lcd_buffer_clr();
 }
 
-void lcd_buffer_writec(const uint8_t x, uint8_t y, const uint8_t c)
+uint8_t pos_from_xy(const uint8_t x, const uint8_t y)
 {
-  if(x < LCD_DISP_LENGTH && y < LCD_LINES)
-  {
-    if(y == 1) y = 2;        // to account for memory of LCD
-    else if (y == 2) y = 1;
-    
-    lcd_buffer[y][x] = c;
-  }
+  return y * LCD_DISP_LENGTH + x;
+}
+
+void lcd_buffer_writec(const uint8_t pos, const char c)
+{
+  if(pos < LCD_BUFFER_SIZE)
+    *(lcd_buffer + pos) = c;
 }
 
 void lcd_buffer_writes(const uint8_t x, const uint8_t y, const char *s)
 {
-  uint8_t length = strlen(s);
-  
-  if(x < LCD_DISP_LENGTH && y < LCD_LINES)
-  {
-    if(x + length < LCD_DISP_LENGTH)
-    {
-      for(uint8_t i = 0; i < length; i++)
-        lcd_buffer_writec(x + i, y, *(s + i));
-      
-      //strcpy(*(lcd_buffer[y] + x), s);
-    }
-    else
-    {   
-      const uint8_t pos = x + y * LCD_DISP_LENGTH;
-      for(uint8_t i = 0; i < length && i + pos < LCD_LINES * LCD_DISP_LENGTH; i++)
-      {
-        uint8_t y_from_pos = (i + pos) / 10 * 10 / LCD_DISP_LENGTH;
-        uint8_t x_from_pos = (i + pos) - y_from_pos * LCD_DISP_LENGTH;
-        
-        lcd_buffer_writec(x_from_pos, y_from_pos, *(s + i));
-      }
-    }
-  }
+  strcpy(lcd_buffer + pos_from_xy(x, y), s);
+  lcd_buffer_writec(pos + strlen(s), 254);
 }
 
 void lcd_update(void)
 {
-  uint8_t x, y;
-  
-  lcd_clrscr();
-  for(y = 0; y < LCD_LINES; y++)
+  for(uint8_t pos = 0; pos < LCD_BUFFER_SIZE; pos++)
   {
-    for(x = 0; x < LCD_DISP_LENGTH; x++)
-    {
-      lcd_putc(lcd_buffer[y][x]);
-    }
+    if(pos > 19 && pos < 40)
+      lcd_putc(*(lcd_buffer + pos + 20));
+    else if(pos > 39 && pos < 60)
+      lcd_putc(*(lcd_buffer + pos - 20));
+    else
+      lcd_putc(*(lcd_buffer + pos));
   }
 }
 
@@ -79,9 +60,7 @@ int main(void)
 {
   lcd_init(LCD_DISP_ON);
   lcd_buffer_init();
-  
-  lcd_buffer_writes(0, 0, "Hello world");
-  lcd_update();
+
   
   while(1)
   {
