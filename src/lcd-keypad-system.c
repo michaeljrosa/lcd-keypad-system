@@ -1,9 +1,6 @@
 /**
  * Author: Michael Rosa
  * Date: June 2016
- *
- * Might have to use a buffer since
- * text is not displaying properly
  */
 
 #include <avr/io.h>
@@ -25,6 +22,11 @@ void lcd_buffer_init(void)
       lcd_buffer[y][x] = 254;
     }
   }
+}
+
+void lcd_buffer_clr(void)
+{
+  lcd_buffer_init();
 }
 
 void lcd_update(void)
