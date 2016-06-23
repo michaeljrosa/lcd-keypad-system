@@ -12,11 +12,13 @@
 #define  LCD_BUFFER_SIZE    LCD_LINES * LCD_DISP_LENGTH
 
 char *lcd_buffer;
+uint8_t cursor;
 
 
 inline void lcd_buffer_clr(void)
 {
   memset(lcd_buffer, 254, LCD_BUFFER_SIZE);   // extended ASCII blank 
+  cursor = 0;
 }
 
 inline void lcd_buffer_init(void)
@@ -25,34 +27,55 @@ inline void lcd_buffer_init(void)
   lcd_buffer_clr();
 }
 
-uint8_t pos_from_xy(const uint8_t x, const uint8_t y)
-{
-  return y * LCD_DISP_LENGTH + x;
-}
-
-void lcd_buffer_writec(const uint8_t pos, const char c)
-{
-  if(pos < LCD_BUFFER_SIZE)
-    *(lcd_buffer + pos) = c;
-}
-
-void lcd_buffer_writes(const uint8_t x, const uint8_t y, const char *s)
-{
-  strncpy(lcd_buffer + pos_from_xy(x, y), s, strlen(s));   // to remove the null byte
-}
-
 void lcd_update(void)
 {
-  for(uint8_t pos = 0; pos < LCD_BUFFER_SIZE; pos++)
-  { 
-    // need to account for how LCD memory is set up
-    if(pos >= LCD_DISP_LENGTH && pos < 2 * LCD_DISP_LENGTH)            // in row 2
-      lcd_putc(*(lcd_buffer + pos + LCD_DISP_LENGTH));       
-    else if(pos >= 2 * LCD_DISP_LENGTH && pos < 3 * LCD_DISP_LENGTH)   // in row 3
-      lcd_putc(*(lcd_buffer + pos - LCD_DISP_LENGTH));
+  char *line = malloc(LCD_DISP_LENGTH + 1);
+  
+  lcd_clrscr();
+  for(uint8_t i = 0; i < LCD_LINES; i++)
+  {
+    // accounting for how LCD memory is set up
+    if(i == 1)
+      memcpy(line, &lcd_buffer[(i + 1) * LCD_DISP_LENGTH], LCD_DISP_LENGTH);
+    else if(i == 2)
+      memcpy(line, &lcd_buffer[(i - 1) * LCD_DISP_LENGTH], LCD_DISP_LENGTH);
     else
-      lcd_putc(*(lcd_buffer + pos));
+      memcpy(line, &lcd_buffer[i * LCD_DISP_LENGTH], LCD_DISP_LENGTH);
+    
+    line[LCD_DISP_LENGTH] = '\0';
+    
+    lcd_puts(line);
   }
+}
+
+void lcd_buffer_gotoxy(const uint8_t x, const uint8_t y)
+{
+  if(x < LCD_DISP_LENGTH && y < LCD_LINES)
+    cursor = y * LCD_DISP_LENGTH + x;
+}
+
+void lcd_buffer_putc(const char c)
+{
+  if(cursor < LCD_BUFFER_SIZE)
+    *(lcd_buffer + cursor) = c;
+  
+  if(++cursor == LCD_BUFFER_SIZE) cursor = 0;
+}
+
+void lcd_buffer_puts(const char *s)
+{
+  if(cursor + strlen(s) < LCD_BUFFER_SIZE)        // if not on the last line
+    strncpy(lcd_buffer + cursor, s, strlen(s));   // write as normal w/o null byte
+  else
+  {                                               // overflow from last line to first
+    strncpy(lcd_buffer + cursor, s, LCD_BUFFER_SIZE - cursor);   
+    strncpy(lcd_buffer, &s[LCD_BUFFER_SIZE - cursor], strlen(s) - LCD_BUFFER_SIZE + cursor);
+  } 
+  
+  cursor += strlen(s);
+  
+  if(cursor >= LCD_BUFFER_SIZE)
+    cursor %= LCD_BUFFER_SIZE;
 }
 
 
