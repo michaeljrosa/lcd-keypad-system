@@ -11,23 +11,11 @@
 
 #define  LCD_BUFFER_SIZE    LCD_LINES * LCD_DISP_LENGTH
 
-char *lcd_buffer;
-uint8_t cursor;
+static char *lcd_buffer;
+static uint8_t cursor;
 
 
-inline void lcd_buffer_clr(void)
-{
-  memset(lcd_buffer, 254, LCD_BUFFER_SIZE);   // extended ASCII blank 
-  cursor = 0;
-}
-
-inline void lcd_buffer_init(void)
-{
-  lcd_buffer = malloc(LCD_BUFFER_SIZE);
-  lcd_buffer_clr();
-}
-
-void lcd_update(void)
+static void lcd_update(void)
 {
   char *line = malloc(LCD_DISP_LENGTH + 1);
   
@@ -48,6 +36,18 @@ void lcd_update(void)
   }
 }
 
+void lcd_buffer_clrscr(void)
+{
+  memset(lcd_buffer, 254, LCD_BUFFER_SIZE);   // extended ASCII blank 
+  cursor = 0;
+}
+
+void lcd_buffer_init(void)
+{
+  lcd_buffer = malloc(LCD_BUFFER_SIZE);
+  lcd_buffer_clrscr();
+}
+
 void lcd_buffer_gotoxy(const uint8_t x, const uint8_t y)
 {
   if(x < LCD_DISP_LENGTH && y < LCD_LINES)
@@ -56,10 +56,10 @@ void lcd_buffer_gotoxy(const uint8_t x, const uint8_t y)
 
 void lcd_buffer_putc(const char c)
 {
-  if(cursor < LCD_BUFFER_SIZE)
-    *(lcd_buffer + cursor) = c;
-  
+  *(lcd_buffer + cursor) = c;
   if(++cursor == LCD_BUFFER_SIZE) cursor = 0;
+  
+  lcd_update();
 }
 
 void lcd_buffer_puts(const char *s)
@@ -76,6 +76,8 @@ void lcd_buffer_puts(const char *s)
   
   if(cursor >= LCD_BUFFER_SIZE)
     cursor %= LCD_BUFFER_SIZE;
+  
+  lcd_update();
 }
 
 
