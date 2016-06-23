@@ -38,14 +38,13 @@ void lcd_buffer_writec(const uint8_t pos, const char c)
 
 void lcd_buffer_writes(const uint8_t x, const uint8_t y, const char *s)
 {
-  strcpy(lcd_buffer + pos_from_xy(x, y), s);
-  lcd_buffer_writec(pos + strlen(s), 254);
+  strncpy(lcd_buffer + pos_from_xy(x, y), s, strlen(s));
 }
 
 void lcd_update(void)
 {
   for(uint8_t pos = 0; pos < LCD_BUFFER_SIZE; pos++)
-  {
+  { // need to account for how LCD mem is set up
     if(pos > 19 && pos < 40)
       lcd_putc(*(lcd_buffer + pos + 20));
     else if(pos > 39 && pos < 60)
@@ -60,7 +59,7 @@ int main(void)
 {
   lcd_init(LCD_DISP_ON);
   lcd_buffer_init();
-
+  
   
   while(1)
   {
