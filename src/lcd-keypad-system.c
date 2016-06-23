@@ -16,7 +16,7 @@ char *lcd_buffer;
 
 inline void lcd_buffer_clr(void)
 {
-  memset(lcd_buffer, 254, LCD_BUFFER_SIZE);
+  memset(lcd_buffer, 254, LCD_BUFFER_SIZE);   // extended ASCII blank 
 }
 
 inline void lcd_buffer_init(void)
