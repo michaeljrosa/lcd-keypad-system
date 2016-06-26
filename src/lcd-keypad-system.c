@@ -4,20 +4,19 @@
  */
 
 #include <string.h>
-#include <stdlib.h>
 #include <avr/io.h>
 #include <util/delay.h>
 #include "lcd.h"
 
 #define  LCD_BUFFER_SIZE    LCD_LINES * LCD_DISP_LENGTH
 
-static char *lcd_buffer;
+static char lcd_buffer[LCD_BUFFER_SIZE];
 static uint8_t cursor;
 
 
 static void lcd_update(void)
 {
-  char *line = malloc(LCD_DISP_LENGTH + 1);
+  char line[LCD_DISP_LENGTH + 1];
   
   lcd_clrscr();
   for(uint8_t i = 0; i < LCD_LINES; i++)
@@ -40,11 +39,11 @@ void lcd_buffer_clrscr(void)
 {
   memset(lcd_buffer, 254, LCD_BUFFER_SIZE);   // extended ASCII blank 
   cursor = 0;
+  lcd_update();
 }
 
 void lcd_buffer_init(void)
 {
-  lcd_buffer = malloc(LCD_BUFFER_SIZE);
   lcd_buffer_clrscr();
 }
 
@@ -56,7 +55,7 @@ void lcd_buffer_gotoxy(const uint8_t x, const uint8_t y)
 
 void lcd_buffer_putc(const char c)
 {
-  *(lcd_buffer + cursor) = c;
+  lcd_buffer[cursor] = c;
   if(++cursor == LCD_BUFFER_SIZE) cursor = 0;
   
   lcd_update();
@@ -85,7 +84,6 @@ int main(void)
 {
   lcd_init(LCD_DISP_ON);
   lcd_buffer_init();
-  
   
   while(1)
   {
