@@ -3,15 +3,21 @@
  * Date: June 2016
  */
 
+#include <stdbool.h>
 #include <string.h>
 #include <avr/io.h>
 #include <util/delay.h>
 #include "lcd.h"
 
 #define  LCD_BUFFER_SIZE    LCD_LINES * LCD_DISP_LENGTH
+
 #define  KEY_PORT           PORTB
 #define  KEY_PIN            PINB
 #define  KEY_DDR            DDRB
+
+#define  BZZ_PORT           PORTB
+#define  BZZ_DDR            DDRB
+#define  BZZ                7
 
 #define  COLS               0x70
 #define  ROWS               0x0F
@@ -19,6 +25,8 @@
 
 static char lcd_buffer[LCD_BUFFER_SIZE];
 static uint8_t cursor;
+const char pass[5] = "1234";
+static char check[5];
 
 
 static void lcd_update(void)
@@ -142,6 +150,8 @@ char key_from_rc(uint8_t r, uint8_t c)
           return '9';
       }
   }
+  
+  return 0xFF;
 }
 
 uint8_t get_key_pressed(void)
@@ -170,26 +180,98 @@ uint8_t get_key_pressed(void)
   return 0xFF;  // no button pressed
 }
 
+void key_beep(void)
+{
+    BZZ_PORT |= (1 << BZZ);
+    _delay_ms(50);
+    BZZ_PORT &= ~(1 << BZZ);
+}
+
+void long_beep(void)
+{
+    BZZ_PORT |= (1 << BZZ);
+    _delay_ms(400);
+    BZZ_PORT &= ~(1 << BZZ);
+}
+
+void three_beeps(void)
+{
+  for(uint8_t i = 0; i < 3; i++)
+  {
+    BZZ_PORT |= (1 << BZZ);
+    _delay_ms(60);
+    BZZ_PORT &= ~(1 << BZZ);
+    _delay_ms(60);
+  }
+}
 
 int main(void)
 {
   lcd_init(LCD_DISP_ON);
   lcd_buffer_init();
-  
+
   KEY_DDR  &= ~(ROWS);
   KEY_PORT |=   ROWS;
   
+  BZZ_DDR  |= (1 << BZZ);
+  
+  check[4] = '\0';
+    
+  lcd_buffer_puts("Enter 4 digit code");
+  lcd_buffer_gotoxy(0,1);
+  
   char key;
-  while(1)
+  int tries = 3;
+  bool sys_lock = true;
+  while(tries > 0 && sys_lock == true)
   {
-    key = get_key_pressed();
-    if(key != 0xFF)
+    lcd_update();
+    for(uint8_t i = 0; i < 5;)
     {
-      lcd_buffer_putc(key);
-      lcd_update();
-      while(get_key_pressed() == key){}
+      key = get_key_pressed();
+      
+      if(key == '#' && i == 4)
+      {
+        i++;
+        lcd_buffer_gotoxy(0,2);
+      }
+      else if(key >= '0' && key <= '9' && i < 4)
+      {
+        check[i++] = key;
+        lcd_buffer_putc(key);
+        lcd_update();
+        key_beep();
+      }
+      
+      while(key == get_key_pressed()){}
+    }
+    
+    if(strcmp(pass, check) == 0)
+    {
+        sys_lock = false;
+        long_beep();
+    }
+    else
+    {
+      tries--;
+      three_beeps();
+      
+      lcd_buffer_clrscr();
+      lcd_buffer_puts("Enter 4 digit code");
+      lcd_buffer_gotoxy(0,1);
     }
   }
+  
+  lcd_buffer_clrscr();
+  if(sys_lock == true)
+  {
+    lcd_buffer_puts("System locked");
+  }
+  else
+  {
+    lcd_buffer_puts("System opened");
+  }
+  lcd_update();
   
   return 0;
 }
