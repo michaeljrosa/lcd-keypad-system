@@ -122,12 +122,6 @@ squeaky_clean:
 flash: $(TARGET).hex 
 	$(AVRDUDE) -c $(PROGRAMMER_TYPE) -p $(MCU) $(PROGRAMMER_ARGS) -U flash:w:$<
 
-flash_windows: $(TARGET).hex 
-	$(AVRDUDE) -c $(PROGRAMMER_TYPE) -p $(MCU) -b 19200 -P com3 -U flash:w:$<
-
-flash_linux: $(TARGET).hex 
-	$(AVRDUDE) -c $(PROGRAMMER_TYPE) -p $(MCU) -b 19200 -P /dev/ttyACM0 -U flash:w:$<
-
 ## An alias
 program: flash
 
@@ -136,6 +130,13 @@ flash_eeprom: $(TARGET).eeprom
 
 avrdude_terminal:
 	$(AVRDUDE) -c $(PROGRAMMER_TYPE) -p $(MCU) $(PROGRAMMER_ARGS) -nt
+
+## Targets for cross-platform development
+flash_windows: PROGRAMMER_ARGS = -b 19200 -P com3
+flash_windows: flash
+
+flash_linux: PROGRAMMER_ARGS = -b 19200 -P /dev/ttyACM0
+flash_linux: flash
 
 ## If you've got multiple programmers that you use, 
 ## you can define them here so that it's easy to switch.
