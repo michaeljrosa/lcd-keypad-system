@@ -122,6 +122,12 @@ squeaky_clean:
 flash: $(TARGET).hex 
 	$(AVRDUDE) -c $(PROGRAMMER_TYPE) -p $(MCU) $(PROGRAMMER_ARGS) -U flash:w:$<
 
+flash_windows: $(TARGET).hex 
+	$(AVRDUDE) -c $(PROGRAMMER_TYPE) -p $(MCU) -b 19200 -P com3 -U flash:w:$<
+
+flash_linux: $(TARGET).hex 
+	$(AVRDUDE) -c $(PROGRAMMER_TYPE) -p $(MCU) -b 19200 -P /dev/ttyACM0 -U flash:w:$<
+
 ## An alias
 program: flash
 
